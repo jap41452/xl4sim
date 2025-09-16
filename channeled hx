@@ -1,0 +1,136 @@
+<div class="wrap">
+    <!-- LEFT COLUMN -->
+    <div class="left-col">
+      <!-- Setup -->
+      <section class="panel" aria-label="Heat sink setup">
+        <h2>Setup — Plate & Coolant</h2>
+        <div class="controls">
+          <div class="row">
+            <div class="field"><label for="plateWidth">Plate Width (mm)</label><input id="plateWidth" type="number" min="1" step="1" value="200"></div>
+            <div class="field"><label for="plateLength">Length (mm)</label><input id="plateLength" type="number" min="1" step="1" value="200"></div>
+          </div>
+          <div class="row">
+            <div class="field"><label for="plateMaterial">Plate Material</label>
+              <select id="plateMaterial"><option>Aluminum</option><option>Copper</option><option>Stainless Steel</option><option>FRP</option></select>
+            </div>
+            <div class="field"><label for="coolant">Coolant</label>
+              <select id="coolant"><option>Water</option><option>Glycol 50/50 mix</option></select>
+            </div>
+          </div>
+          <div class="row">
+            <div class="field"><label for="flowLpm">Coolant Flow (L/min)</label><input id="flowLpm" type="number" min="0" step="0.1" value="1.5"></div>
+            <div class="field"><label for="inletT">Coolant Inlet T (°C)</label><input id="inletT" type="number" step="0.1" value="25"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Solution panel -->
+      <section class="panel" aria-label="Solution panel">
+        <h2>Solution — Layout & Heat</h2>
+        <div class="controls">
+          <div class="row">
+            <div class="field"><label for="chanB">Channel depth b (mm)</label><input id="chanB" type="number" min="0" step="0.1" value="1.5"></div>
+            <div class="field"><label for="minWall">Wall thickness t (mm)</label><input id="minWall" type="number" min="0" step="0.1" value="1.5"></div>
+          </div>
+          <div class="row">
+            <div class="field"><label for="chanH">Channel width w (mm)</label><input id="chanH" class="calc" type="number" readonly></div>
+            <div class="field"><label for="plateThk">Plate thickness (mm)</label><input id="plateThk" type="number" min="0.2" step="0.1" value="2.0"></div>
+          </div>
+
+          <!-- Laminar BC selector -->
+          <div class="row">
+            <div class="field" style="grid-column:1 / -1">
+              <label for="lamBC">Laminar BC (fully developed)</label>
+              <select id="lamBC">
+                <option value="T" selected>All walls isothermal (T) — conservative</option>
+                <option value="H2-4">All walls isoflux (H2-4)</option>
+                <option value="H2-1">Top isoflux, others adiabatic (H2-1)</option>
+              </select>
+              <div class="small">Laminar Nu depends on which walls are heated. T gives the lowest h → warmest prediction.</div>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="field"><label for="maxCh">Max # of channels</label><input id="maxCh" class="calc" type="number" readonly></div>
+            <div class="field"><label for="minCh">Min # of channels</label><input id="minCh" class="calc" type="number" readonly></div>
+          </div>
+
+          <div class="row">
+            <div class="field" style="grid-column:1 / -1">
+              <label>Heat Sources, W <span class="hint">(Click <b>Add</b>, then drag on the grid)</span></label>
+              <div class="actions"><button id="btnAddHS" class="btn primary" type="button">Add</button><button id="btnClearHS" class="btn" type="button">Clear</button></div>
+              <div id="hsList" class="list" aria-live="polite"></div>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="field" style="grid-column:1 / -1"><label for="totalHeat">Total Heat Load (W)</label><input id="totalHeat" class="calc" type="number" readonly value="0"></div>
+          </div>
+
+          <div class="row">
+            <div class="field"><label>&nbsp;</label><button id="btnSolve" class="btn primary" type="button">Solve</button></div>
+            <div class="field"><label>&nbsp;</label><button id="btnContours" class="btn" type="button">T Contours</button></div>
+          </div>
+
+          <div class="row" style="grid-column:1 / -1">
+            <div class="field" style="grid-column:1 / -1">
+              <canvas id="chart" class="chart" width="276" height="170"></canvas>
+              <div id="chartLegend" class="vis-legend" style="display:none">
+                <span class="key"><span class="swatch" style="background:#0b73c8"></span>Max T (°C)</span>
+                <span class="key"><span class="swatch" style="background:#e11d48"></span>ΔP (kPa)</span>
+              </div>
+              <div id="solveNote" class="small"></div>
+            </div>
+          </div>
+
+          <!-- Export row -->
+          <div class="row" style="grid-column:1 / -1">
+            <div class="field">
+              <label>&nbsp;</label>
+              <button id="btnCSV" class="btn" type="button">CSV</button>
+            </div>
+            <div class="field">
+              <label>&nbsp;</label>
+              <button id="btnJSON" class="btn" type="button">JSON</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- RIGHT COLUMN -->
+    <div class="right-col" style="display:flex;flex-direction:column;gap:16px">
+      <section class="panel" aria-label="Plate grid guide">
+        <h2>Plate Grid</h2>
+        <div class="grid-wrap">
+          <canvas id="gridCanvas" class="grid-canvas"></canvas>
+          <div class="legend"><span id="sizeReadout">—</span><span id="tickReadout">—</span></div>
+        </div>
+      </section>
+
+      <section class="panel" aria-label="Channel end view">
+        <h2>Channel End View (Min #)</h2>
+        <canvas id="endView" class="grid-canvas"></canvas>
+        <div class="legend"><span id="endSummary">—</span><span id="endNote" class="small"></span></div>
+      </section>
+
+      <section class="panel" aria-label="Solve status">
+        <h2>Solve Status</h2>
+        <div class="tbl-wrap">
+          <table aria-describedby="solveNote">
+            <thead>
+              <tr><th>N</th><th>BC</th><th>Re</th><th>Nu</th><th>h (W/m²K)</th><th>ΔP (kPa)</th><th>Tₘₐₓ (°C)</th></tr>
+            </thead>
+            <tbody id="statusBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Temperature contours panel -->
+      <section class="panel" aria-label="Temperature contours">
+        <h2>Temperature Contours</h2>
+        <canvas id="contourCanvas" class="grid-canvas"></canvas>
+        <div class="legend"><span id="contourSummary">Click “T Contours” then pick a chart point.</span><span id="contourNote" class="small"></span></div>
+      </section>
+    </div>
+  </div>
